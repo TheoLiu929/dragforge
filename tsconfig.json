@@ -1,0 +1,72 @@
+{
+    "compilerOptions": {
+        "target": "ES2020",
+        "module": "ESNext",
+        "moduleResolution": "node",
+        "composite": true,
+        "declaration": true,
+        "declarationMap": true,
+        "esModuleInterop": true,
+        "forceConsistentCasingInFileNames": true,
+        "skipLibCheck": true,
+        "jsx": "react-jsx",
+        "lib": [
+            "ES2020",
+            "DOM",
+            "DOM.Iterable"
+        ],
+        "strict": false,
+        "noImplicitAny": false,
+        "noImplicitThis": false,
+        "noUnusedLocals": false,
+        "noUnusedParameters": false,
+        "allowUnreachableCode": true,
+        "allowUnusedLabels": true,
+        "noFallthroughCasesInSwitch": false,
+        "noImplicitReturns": false,
+        "baseUrl": ".",
+        "paths": {
+            "@dragforge/core": [
+                "packages/core/src"
+            ],
+            "@dragforge/react": [
+                "packages/react/src"
+            ],
+            "@dragforge/sensors": [
+                "packages/sensors/src"
+            ],
+            "@dragforge/collision": [
+                "packages/collision/src"
+            ],
+            "@dragforge/animations": [
+                "packages/animations/src"
+            ]
+        }
+    },
+    "references": [
+        {
+            "path": "./packages/core"
+        },
+        {
+            "path": "./packages/react"
+        },
+        {
+            "path": "./packages/sensors"
+        },
+        {
+            "path": "./packages/collision"
+        },
+        {
+            "path": "./packages/animations"
+        },
+        {
+            "path": "./examples/basic"
+        }
+    ],
+    "include": [],
+    "exclude": [
+        "node_modules",
+        "dist",
+        "build"
+    ]
+}

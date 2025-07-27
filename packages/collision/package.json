@@ -1,0 +1,34 @@
+{
+  "name": "@dragforge/collision",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "Collision detection algorithms for DragForge",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "vite build --watch",
+    "build": "vite build",
+    "test": "vitest",
+    "test:watch": "vitest watch"
+  },
+  "keywords": ["collision", "detection", "bounding-box", "drag-and-drop"],
+  "author": "DragForge Team",
+  "license": "MIT",
+  "dependencies": {
+    "@dragforge/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "vite": "^5.1.0",
+    "vitest": "^1.2.0"
+  }
+}

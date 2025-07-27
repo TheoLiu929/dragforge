@@ -1,0 +1,42 @@
+{
+  "name": "@dragforge/react",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "React bindings for DragForge",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "vite build --watch",
+    "build": "vite build",
+    "test": "vitest",
+    "test:watch": "vitest watch"
+  },
+  "keywords": ["react", "drag", "drop", "draggable", "droppable", "drag-and-drop"],
+  "author": "DragForge Team",
+  "license": "MIT",
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0"
+  },
+  "dependencies": {
+    "@dragforge/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "vite": "^5.1.0",
+    "vitest": "^1.2.0"
+  }
+}
