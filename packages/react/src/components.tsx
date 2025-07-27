@@ -1,7 +1,7 @@
 import React, { ReactNode } from 'react';
-import { useDraggable, useDroppable } from './hooks';
+import { useDragForgeable, useDragForgeDroppable } from './hooks';
 
-export interface DraggableProps {
+export interface DragForgeableProps {
   id: string;
   children: ReactNode;
   data?: any;
@@ -10,8 +10,8 @@ export interface DraggableProps {
   style?: React.CSSProperties;
 }
 
-export function Draggable({ id, children, data, disabled, className, style }: DraggableProps) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+export function DragForgeable({ id, children, data, disabled, className, style }: DragForgeableProps) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDragForgeable({
     id,
     data,
     disabled,
@@ -33,6 +33,10 @@ export function Draggable({ id, children, data, disabled, className, style }: Dr
     event.dataTransfer.effectAllowed = 'copy';
   };
 
+  const transformStyle = transform 
+    ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
+    : undefined;
+
   return (
     <div
       ref={setNodeRef}
@@ -41,19 +45,18 @@ export function Draggable({ id, children, data, disabled, className, style }: Dr
       onDragStart={handleDragStart}
       style={{
         ...style,
-        transform: transform || undefined,
+        transform: transformStyle,
         opacity: isDragging ? 0.5 : 1,
         cursor: disabled ? 'default' : 'grab',
       }}
       {...attributes}
-      {...listeners}
     >
       {children}
     </div>
   );
 }
 
-export interface DroppableProps {
+export interface DragForgeDroppableProps {
   id: string;
   children: ReactNode;
   data?: any;
@@ -62,8 +65,8 @@ export interface DroppableProps {
   style?: React.CSSProperties;
 }
 
-export function Droppable({ id, children, data, disabled, className, style }: DroppableProps) {
-  const { setNodeRef, isOver } = useDroppable({
+export function DragForgeDroppable({ id, children, data, disabled, className, style }: DragForgeDroppableProps) {
+  const { attributes, setNodeRef, isOver } = useDragForgeDroppable({
     id,
     data,
     disabled,
@@ -77,6 +80,7 @@ export function Droppable({ id, children, data, disabled, className, style }: Dr
         ...style,
         backgroundColor: isOver ? 'rgba(0, 0, 0, 0.05)' : undefined,
       }}
+      {...attributes}
     >
       {children}
     </div>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { DragForgeProvider, Draggable, Droppable, Canvas, useDraggable } from '@dragforge/react';
+import { DragForgeProvider, DragForgeable, DragForgeDroppable, Canvas, useDragForgeCollisionDetection } from '@dragforge/react';
+import { RectIntersectionCollision } from '@dragforge/core';
 import './App.css';
 
 interface Item {
@@ -8,42 +9,41 @@ interface Item {
   color: string;
 }
 
-function DraggableItem({ item }: { item: Item }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: item.id,
-    data: item,
-  });
-
+function DragForgeableItem({ item }: { item: Item }) {
   const handleDragStart = (event: React.DragEvent) => {
     const dragData = {
       id: item.id,
       content: item.content,
       color: item.color,
     };
-    
+
     event.dataTransfer.setData('application/json', JSON.stringify(dragData));
     event.dataTransfer.effectAllowed = 'copy';
   };
 
   return (
     <div
-      ref={setNodeRef}
       className="draggable-item"
       draggable={true}
       onDragStart={handleDragStart}
       style={{
         backgroundColor: item.color,
-        opacity: isDragging ? 0.5 : 1,
         cursor: 'grab',
       }}
-      {...attributes}
-      {...listeners}
     >
       {item.content}
     </div>
   );
 }
 
+function CollisionInfo() {
+  const collision = useDragForgeCollisionDetection();
+  return (
+    <div style={{ padding: '10px', background: '#f5f5f5', borderRadius: '4px', marginBottom: '20px' }}>
+      <strong>Collision Detection:</strong> {collision ? collision.constructor.name : 'Default'}
+    </div>
+  );
+}
 
 function App() {
   const [items] = useState<Item[]>([
@@ -53,25 +53,30 @@ function App() {
     { id: '4', content: 'Item 4', color: '#f9ca24' },
   ]);
 
+  const customCollision = new RectIntersectionCollision();
+
   const handleCanvasDrop = (item: any, position: { x: number; y: number }) => {
     console.log('Item dropped on canvas:', item, 'at position:', position);
   };
 
   return (
     <DragForgeProvider
-      onDragStart={(item) => console.log('Drag started:', item)}
-      onDragEnd={(item, target) => console.log('Drag ended:', item, 'on', target)}
+      collisionDetection={customCollision}
+      onDragStart={(event) => console.log('Drag started:', event)}
+      onDragEnd={(event) => console.log('Drag ended:', event)}
     >
       <div className="app">
         <h1>DragForge Example</h1>
-        
+
+        <CollisionInfo />
+
         <div className="main-layout">
           <div className="sidebar">
             <div className="items-section">
               <h2>Draggable Items</h2>
               <div className="items-grid">
                 {items.map((item) => (
-                  <DraggableItem key={item.id} item={item} />
+                  <DragForgeableItem key={item.id} item={item} />
                 ))}
               </div>
             </div>
@@ -99,17 +104,25 @@ function App() {
         <div className="demo-section">
           <h2>Using Components</h2>
           <div className="component-demo">
-            <Draggable id="component-1" className="demo-draggable" data={{ type: 'component', name: 'Button' }}>
+            <DragForgeable
+              id="component-1"
+              className="demo-draggable"
+              data={{ type: 'component', name: 'Button' }}
+            >
               <div className="demo-content">Draggable Component 1</div>
-            </Draggable>
-            
-            <Draggable id="component-2" className="demo-draggable" data={{ type: 'component', name: 'Input' }}>
-              <div className="demo-content">Draggable Component 2</div>
-            </Draggable>
+            </DragForgeable>
 
-            <Droppable id="component-drop" className="demo-droppable">
+            <DragForgeable
+              id="component-2"
+              className="demo-draggable"
+              data={{ type: 'component', name: 'Input' }}
+            >
+              <div className="demo-content">Draggable Component 2</div>
+            </DragForgeable>
+
+            <DragForgeDroppable id="component-drop" className="demo-droppable">
               <div className="demo-drop-content">Drop Components Here</div>
-            </Droppable>
+            </DragForgeDroppable>
           </div>
         </div>
       </div>

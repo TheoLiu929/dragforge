@@ -6,7 +6,6 @@ import {
   Position,
   DragEvent,
   Sensor,
-  CollisionDetection,
   DragEventListener
 } from './types';
 import { EventEmitter } from './eventSystem';

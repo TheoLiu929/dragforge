@@ -1,5 +1,5 @@
 import React, { useRef, useState, useCallback } from 'react';
-import { useDroppable } from './hooks';
+import { useDragForgeDroppable } from './hooks';
 
 export interface CanvasProps {
   id: string;
@@ -39,7 +39,7 @@ export function Canvas({
   const [droppedItems, setDroppedItems] = useState<DroppedItem[]>([]);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
-  const { setNodeRef, isOver } = useDroppable({
+  const { setNodeRef, isOver } = useDragForgeDroppable({
     id,
   });
 
