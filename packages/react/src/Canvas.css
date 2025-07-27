@@ -1,0 +1,118 @@
+.canvas-container {
+  position: relative;
+  display: inline-block;
+}
+
+.canvas {
+  position: relative;
+  transition: background-color 0.2s ease;
+  cursor: crosshair;
+}
+
+.canvas-over {
+  background-color: #f0f8ff !important;
+  border-color: #4CAF50 !important;
+}
+
+/* 刻度尺样式 */
+.ruler {
+  position: absolute;
+  background-color: #f5f5f5;
+  border: 1px solid #ddd;
+  font-size: 10px;
+  color: #666;
+}
+
+.horizontal-ruler {
+  top: -25px;
+  left: 0;
+  right: 0;
+  height: 24px;
+}
+
+.vertical-ruler {
+  left: -25px;
+  top: 0;
+  bottom: 0;
+  width: 24px;
+}
+
+.ruler-mark {
+  position: absolute;
+  background-color: #666;
+}
+
+.ruler-mark.horizontal {
+  bottom: 0;
+  width: 1px;
+}
+
+.ruler-mark.vertical {
+  right: 0;
+  height: 1px;
+}
+
+.ruler-mark.major {
+  background-color: #333;
+}
+
+.ruler-mark.minor {
+  background-color: #999;
+}
+
+.ruler-label {
+  position: absolute;
+  font-size: 9px;
+  color: #333;
+  white-space: nowrap;
+}
+
+.horizontal-ruler .ruler-label {
+  bottom: 12px;
+  left: 2px;
+}
+
+.vertical-ruler .ruler-label {
+  right: 12px;
+  top: -6px;
+  transform: rotate(-90deg);
+  transform-origin: center;
+}
+
+/* 网格样式 */
+.canvas-grid {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+/* 拖放的项目样式 */
+.dropped-item {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: move;
+}
+
+.dropped-item:hover {
+  transform: translate(-50%, -50%) scale(1.05);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .ruler {
+    font-size: 8px;
+  }
+  
+  .ruler-label {
+    font-size: 7px;
+  }
+  
+  .horizontal-ruler {
+    height: 20px;
+    top: -21px;
+  }
+  
+  .vertical-ruler {
+    width: 20px;
+    left: -21px;
+  }
+}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { DragForgeProvider, Draggable, Droppable, useDraggable, useDroppable } from '@dragforge/react';
+import { DragForgeProvider, Draggable, Droppable, Canvas, useDraggable } from '@dragforge/react';
 import './App.css';
 
 interface Item {
@@ -14,10 +14,23 @@ function DraggableItem({ item }: { item: Item }) {
     data: item,
   });
 
+  const handleDragStart = (event: React.DragEvent) => {
+    const dragData = {
+      id: item.id,
+      content: item.content,
+      color: item.color,
+    };
+    
+    event.dataTransfer.setData('application/json', JSON.stringify(dragData));
+    event.dataTransfer.effectAllowed = 'copy';
+  };
+
   return (
     <div
       ref={setNodeRef}
       className="draggable-item"
+      draggable={true}
+      onDragStart={handleDragStart}
       style={{
         backgroundColor: item.color,
         opacity: isDragging ? 0.5 : 1,
@@ -31,23 +44,6 @@ function DraggableItem({ item }: { item: Item }) {
   );
 }
 
-function DropZone({ id, title }: { id: string; title: string }) {
-  const { setNodeRef, isOver } = useDroppable({
-    id,
-  });
-
-  return (
-    <div
-      ref={setNodeRef}
-      className="drop-zone"
-      style={{
-        backgroundColor: isOver ? '#e0e0e0' : '#f5f5f5',
-      }}
-    >
-      <h3>{title}</h3>
-    </div>
-  );
-}
 
 function App() {
   const [items] = useState<Item[]>([
@@ -57,6 +53,10 @@ function App() {
     { id: '4', content: 'Item 4', color: '#f9ca24' },
   ]);
 
+  const handleCanvasDrop = (item: any, position: { x: number; y: number }) => {
+    console.log('Item dropped on canvas:', item, 'at position:', position);
+  };
+
   return (
     <DragForgeProvider
       onDragStart={(item) => console.log('Drag started:', item)}
@@ -65,34 +65,45 @@ function App() {
       <div className="app">
         <h1>DragForge Example</h1>
         
-        <div className="container">
-          <div className="items-section">
-            <h2>Draggable Items</h2>
-            <div className="items-grid">
-              {items.map((item) => (
-                <DraggableItem key={item.id} item={item} />
-              ))}
+        <div className="main-layout">
+          <div className="sidebar">
+            <div className="items-section">
+              <h2>Draggable Items</h2>
+              <div className="items-grid">
+                {items.map((item) => (
+                  <DraggableItem key={item.id} item={item} />
+                ))}
+              </div>
             </div>
           </div>
 
-          <div className="drop-section">
-            <h2>Drop Zones</h2>
-            <div className="drop-zones">
-              <DropZone id="zone-1" title="Drop Zone 1" />
-              <DropZone id="zone-2" title="Drop Zone 2" />
-              <DropZone id="zone-3" title="Drop Zone 3" />
-            </div>
+          <div className="canvas-section">
+            <h2>Design Canvas</h2>
+            <p className="canvas-description">
+              拖拽左侧的项目到画布的任意位置。画布支持网格对齐和刻度尺。
+            </p>
+            <Canvas
+              id="design-canvas"
+              width={800}
+              height={500}
+              showRuler={true}
+              showGrid={true}
+              rulerUnit={20}
+              gridSize={20}
+              onItemDrop={handleCanvasDrop}
+              className="design-canvas"
+            />
           </div>
         </div>
 
         <div className="demo-section">
           <h2>Using Components</h2>
           <div className="component-demo">
-            <Draggable id="component-1" className="demo-draggable">
+            <Draggable id="component-1" className="demo-draggable" data={{ type: 'component', name: 'Button' }}>
               <div className="demo-content">Draggable Component 1</div>
             </Draggable>
             
-            <Draggable id="component-2" className="demo-draggable">
+            <Draggable id="component-2" className="demo-draggable" data={{ type: 'component', name: 'Input' }}>
               <div className="demo-content">Draggable Component 2</div>
             </Draggable>
 

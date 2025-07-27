@@ -17,14 +17,33 @@ export function Draggable({ id, children, data, disabled, className, style }: Dr
     disabled,
   });
 
+  // HTML5 拖拽支持
+  const handleDragStart = (event: React.DragEvent) => {
+    if (disabled) {
+      event.preventDefault();
+      return;
+    }
+    
+    const dragData = {
+      id,
+      ...data,
+    };
+    
+    event.dataTransfer.setData('application/json', JSON.stringify(dragData));
+    event.dataTransfer.effectAllowed = 'copy';
+  };
+
   return (
     <div
       ref={setNodeRef}
       className={className}
+      draggable={!disabled}
+      onDragStart={handleDragStart}
       style={{
         ...style,
         transform: transform || undefined,
         opacity: isDragging ? 0.5 : 1,
+        cursor: disabled ? 'default' : 'grab',
       }}
       {...attributes}
       {...listeners}
