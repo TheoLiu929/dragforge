@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useState, useCallback } from 'react';
 import { useDroppable } from './hooks';
 
 export interface CanvasProps {
@@ -37,7 +37,6 @@ export function Canvas({
 }: CanvasProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [droppedItems, setDroppedItems] = useState<DroppedItem[]>([]);
-  const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
   const { setNodeRef, isOver } = useDroppable({
@@ -48,14 +47,12 @@ export function Canvas({
   const handleItemDragStart = useCallback((event: React.DragEvent, item: DroppedItem) => {
     if (!canvasRef.current) return;
 
-    const rect = canvasRef.current.getBoundingClientRect();
     const itemRect = (event.target as HTMLElement).getBoundingClientRect();
 
     // 计算鼠标相对于元素的偏移
     const offsetX = event.clientX - itemRect.left - itemRect.width / 2;
     const offsetY = event.clientY - itemRect.top - itemRect.height / 2;
 
-    setDraggedItemId(item.id);
     setDragOffset({ x: offsetX, y: offsetY });
 
     // 设置拖拽数据，标记为内部移动
@@ -76,7 +73,6 @@ export function Canvas({
 
   // 处理画布内元素的拖拽结束
   const handleItemDragEnd = useCallback(() => {
-    setDraggedItemId(null);
     setDragOffset({ x: 0, y: 0 });
 
     // 清除拖拽状态

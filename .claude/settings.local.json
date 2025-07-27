@@ -9,7 +9,8 @@
       "Bash(do)",
       "Bash(sed:*)",
       "Bash(done)",
-      "Bash(pnpm dev:*)"
+      "Bash(pnpm dev:*)",
+      "Bash(ls:*)"
     ],
     "deny": []
   }
