@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { DragEngine } from './dragEngine';
-import { DraggableItem, DropTarget, Position } from './types';
+import { DragEngine } from '../src/dragEngine';
+import { DragNode, DropTarget, Position } from '../src/types';
 
 describe('DragEngine', () => {
   let engine: DragEngine;

@@ -23,6 +23,9 @@
   "keywords": ["drag", "drop", "draggable", "droppable", "drag-and-drop"],
   "author": "DragForge Team",
   "license": "MIT",
+  "dependencies": {
+    "@dragforge/sensors": "workspace:*"
+  },
   "devDependencies": {
     "@types/node": "^20.11.0",
     "vite": "^5.1.0",

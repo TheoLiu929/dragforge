@@ -13,7 +13,7 @@ export default defineConfig({
       fileName: 'index',
     },
     rollupOptions: {
-      external: ['@dragforge/core'],
+      external: [],
     },
     sourcemap: true,
     minify: false,

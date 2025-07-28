@@ -13,7 +13,7 @@ export default defineConfig({
       fileName: 'index',
     },
     rollupOptions: {
-      external: [],
+      external: ['@dragforge/sensors'],
     },
     sourcemap: true,
     minify: false,

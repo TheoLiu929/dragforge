@@ -5,33 +5,54 @@ import {
   DropTarget, 
   Position,
   DragEvent,
-  Sensor,
-  DragEventListener
+  DragEventListener,
+  SensorEvent,
+  SensorEventHandler
 } from './types';
 import { EventEmitter } from './eventSystem';
 import { RectIntersectionCollision } from './collisionDetection';
-import { MouseSensor } from './sensors';
+import { SensorManager, createMouseSensor, createSensorManager } from '@dragforge/sensors';
+
+// 新的引擎状态接口
+interface DragState {
+  isDragging: boolean;
+  draggedNode: DragNode | null;
+  position: Position;
+  initialPosition: Position;
+  delta: Position;
+  activeDropTarget: DropTarget | null;
+  startTime: number;
+}
 
 export class DragEngine {
-  private state: DragEngineState;
+  private state: {
+    dragNodes: Map<string, DragNode>;
+    dropTargets: Map<string, DropTarget>;
+    isEnabled: boolean;
+    dragState: DragState;
+  };
+  
   private options: DragEngineOptions;
   private eventEmitter: EventEmitter;
+  private sensorManager: SensorManager;
   private rafId: number | null = null;
   private pendingUpdate: (() => void) | null = null;
 
   constructor(options: DragEngineOptions = {}) {
     this.options = {
       collisionDetection: new RectIntersectionCollision(),
-      sensors: [new MouseSensor()],
       ...options,
     };
 
     this.eventEmitter = new EventEmitter();
+    this.sensorManager = createSensorManager({
+      autoActivate: true,
+      exclusiveMode: true
+    });
 
     this.state = {
       dragNodes: new Map(),
       dropTargets: new Map(),
-      sensors: new Map(),
       isEnabled: true,
       dragState: {
         isDragging: false,
@@ -40,211 +61,323 @@ export class DragEngine {
         initialPosition: { x: 0, y: 0 },
         delta: { x: 0, y: 0 },
         activeDropTarget: null,
+        startTime: 0
       },
     };
 
     this.setupSensors();
+    this.bindSensorEvents();
   }
 
-  // 传感器管理
+  // 传感器系统设置
   private setupSensors(): void {
-    if (!this.options.sensors) return;
+    // 注册默认的MouseSensor
+    const mouseSensor = createMouseSensor({
+      activationConstraint: {
+        distance: 5,
+        tolerance: 2
+      }
+    });
 
-    for (const sensor of this.options.sensors) {
-      this.state.sensors.set(sensor.name, sensor);
+    this.sensorManager.register(mouseSensor);
+  }
+
+  private bindSensorEvents(): void {
+    // 这里我们还没有附加到具体元素，将在registerDragNode时附加
+  }
+
+  // 传感器事件处理器
+  private createSensorEventHandler(): SensorEventHandler {
+    return (event: SensorEvent) => {
+      switch (event.type) {
+        case 'start':
+          this.handleDragStart(event);
+          break;
+        case 'move':
+          this.handleDragMove(event);
+          break;
+        case 'end':
+          this.handleDragEnd(event);
+          break;
+        case 'cancel':
+          this.handleDragCancel(event);
+          break;
+      }
+    };
+  }
+
+  // 拖拽事件处理
+  private handleDragStart(sensorEvent: SensorEvent): void {
+    if (!this.state.isEnabled || this.state.dragState.isDragging) return;
+
+    // 找到对应的拖拽节点
+    const dragNode = this.findDragNodeByElement(sensorEvent.target);
+    if (!dragNode || dragNode.disabled) return;
+
+    // 更新拖拽状态
+    this.state.dragState = {
+      isDragging: true,
+      draggedNode: dragNode,
+      position: sensorEvent.position,
+      initialPosition: sensorEvent.position,
+      delta: { x: 0, y: 0 },
+      activeDropTarget: null,
+      startTime: sensorEvent.timestamp
+    };
+
+    // 发送拖拽开始事件
+    const dragEvent: DragEvent = {
+      type: 'dragstart',
+      node: dragNode,
+      position: sensorEvent.position,
+      delta: { x: 0, y: 0 },
+      timestamp: sensorEvent.timestamp
+    };
+
+    this.eventEmitter.emit('dragstart', dragEvent);
+  }
+
+  private handleDragMove(sensorEvent: SensorEvent): void {
+    if (!this.state.dragState.isDragging || !this.state.dragState.draggedNode) return;
+
+    // 计算delta
+    const delta = {
+      x: sensorEvent.position.x - this.state.dragState.initialPosition.x,
+      y: sensorEvent.position.y - this.state.dragState.initialPosition.y
+    };
+
+    // 更新状态
+    this.state.dragState.position = sensorEvent.position;
+    this.state.dragState.delta = delta;
+
+    // 碰撞检测
+    const dropTarget = this.detectCollision(sensorEvent.position);
+    const previousTarget = this.state.dragState.activeDropTarget;
+
+    // 处理目标变化
+    if (dropTarget !== previousTarget) {
+      // 离开之前的目标
+      if (previousTarget) {
+        const leaveEvent: DragEvent = {
+          type: 'dragleave',
+          node: this.state.dragState.draggedNode,
+          position: sensorEvent.position,
+          target: previousTarget,
+          delta,
+          timestamp: sensorEvent.timestamp
+        };
+        this.eventEmitter.emit('dragleave', leaveEvent);
+      }
+
+      // 进入新目标
+      if (dropTarget) {
+        const enterEvent: DragEvent = {
+          type: 'dragenter',
+          node: this.state.dragState.draggedNode,
+          position: sensorEvent.position,
+          target: dropTarget,
+          delta,
+          timestamp: sensorEvent.timestamp
+        };
+        this.eventEmitter.emit('dragenter', enterEvent);
+      }
+
+      this.state.dragState.activeDropTarget = dropTarget;
     }
+
+    // 发送移动事件
+    const moveEvent: DragEvent = {
+      type: 'dragmove',
+      node: this.state.dragState.draggedNode,
+      position: sensorEvent.position,
+      target: dropTarget || undefined,
+      delta,
+      timestamp: sensorEvent.timestamp
+    };
+
+    this.scheduleUpdate(() => {
+      this.eventEmitter.emit('dragmove', moveEvent);
+    });
   }
 
-  registerSensor(sensor: Sensor): void {
-    this.state.sensors.set(sensor.name, sensor);
-  }
+  private handleDragEnd(sensorEvent: SensorEvent): void {
+    if (!this.state.dragState.isDragging || !this.state.dragState.draggedNode) return;
 
-  unregisterSensor(name: string): void {
-    const sensor = this.state.sensors.get(name);
-    if (sensor) {
-      sensor.teardown();
-      this.state.sensors.delete(name);
+    const { draggedNode, activeDropTarget, delta } = this.state.dragState;
+
+    // 如果有活跃的放置目标，触发drop事件
+    if (activeDropTarget) {
+      const dropEvent: DragEvent = {
+        type: 'drop',
+        node: draggedNode,
+        position: sensorEvent.position,
+        target: activeDropTarget,
+        delta,
+        timestamp: sensorEvent.timestamp
+      };
+      this.eventEmitter.emit('drop', dropEvent);
     }
+
+    // 发送拖拽结束事件
+    const endEvent: DragEvent = {
+      type: 'dragend',
+      node: draggedNode,
+      position: sensorEvent.position,
+      target: activeDropTarget || undefined,
+      delta,
+      timestamp: sensorEvent.timestamp
+    };
+
+    this.eventEmitter.emit('dragend', endEvent);
+
+    // 重置状态
+    this.resetDragState();
   }
 
-  // 拖拽节点管理
+  private handleDragCancel(sensorEvent: SensorEvent): void {
+    if (!this.state.dragState.isDragging || !this.state.dragState.draggedNode) return;
+
+    const { draggedNode, delta } = this.state.dragState;
+
+    // 发送取消事件
+    const cancelEvent: DragEvent = {
+      type: 'dragcancel',
+      node: draggedNode,
+      position: sensorEvent.position,
+      delta,
+      timestamp: sensorEvent.timestamp
+    };
+
+    this.eventEmitter.emit('dragcancel', cancelEvent);
+
+    // 重置状态
+    this.resetDragState();
+  }
+
+  // 工具方法
+  private findDragNodeByElement(element: HTMLElement): DragNode | null {
+    for (const node of this.state.dragNodes.values()) {
+      if (node.element === element || node.element?.contains(element)) {
+        return node;
+      }
+    }
+    return null;
+  }
+
+  private detectCollision(position: Position): DropTarget | null {
+    if (!this.options.collisionDetection || !this.state.dragState.draggedNode) {
+      return null;
+    }
+
+    const dropTargets = Array.from(this.state.dropTargets.values());
+    return this.options.collisionDetection.detectCollision(
+      this.state.dragState.draggedNode,
+      position,
+      dropTargets
+    );
+  }
+
+  private resetDragState(): void {
+    this.state.dragState = {
+      isDragging: false,
+      draggedNode: null,
+      position: { x: 0, y: 0 },
+      initialPosition: { x: 0, y: 0 },
+      delta: { x: 0, y: 0 },
+      activeDropTarget: null,
+      startTime: 0
+    };
+  }
+
+  private scheduleUpdate(callback: () => void): void {
+    if (this.pendingUpdate) {
+      this.pendingUpdate = callback;
+      return;
+    }
+
+    this.pendingUpdate = callback;
+    this.rafId = requestAnimationFrame(() => {
+      if (this.pendingUpdate) {
+        this.pendingUpdate();
+        this.pendingUpdate = null;
+      }
+      this.rafId = null;
+    });
+  }
+
+  // 公共API
   registerDragNode(node: DragNode): () => void {
     this.state.dragNodes.set(node.id, node);
 
-    return () => {
-      this.unregisterDragNode(node.id);
-    };
+    // 如果有元素，将其附加到传感器管理器
+    if (node.element) {
+      this.sensorManager.attach(node.element, this.createSensorEventHandler());
+    }
+
+    return () => this.unregisterDragNode(node.id);
   }
 
   unregisterDragNode(id: string): void {
-    this.state.dragNodes.delete(id);
+    const node = this.state.dragNodes.get(id);
+    if (node) {
+      // 如果正在拖拽该节点，取消拖拽
+      if (this.state.dragState.isDragging && this.state.dragState.draggedNode?.id === id) {
+        this.handleDragCancel({
+          type: 'cancel',
+          position: this.state.dragState.position,
+          target: node.element!,
+          nativeEvent: new CustomEvent('cancel'),
+          timestamp: Date.now()
+        });
+      }
+
+      this.state.dragNodes.delete(id);
+    }
   }
 
-  // 放置目标管理
   registerDropTarget(target: DropTarget): () => void {
     this.state.dropTargets.set(target.id, target);
-
-    return () => {
-      this.unregisterDropTarget(target.id);
-    };
+    return () => this.unregisterDropTarget(target.id);
   }
 
   unregisterDropTarget(id: string): void {
     this.state.dropTargets.delete(id);
   }
 
-  // 拖拽操作
-  startDrag(nodeId: string, position: Position): void {
-    if (!this.state.isEnabled) return;
-
-    const node = this.state.dragNodes.get(nodeId);
-    if (!node || node.disabled) return;
-
-    this.state.dragState = {
-      isDragging: true,
-      draggedNode: node,
-      position: { ...position },
-      initialPosition: { ...position },
-      delta: { x: 0, y: 0 },
-      activeDropTarget: null,
-    };
-
-    this.emitEvent({
-      type: 'dragstart',
-      node,
-      position,
-      timestamp: Date.now(),
-    });
+  // 传感器管理
+  registerSensor(sensor: any): () => void {
+    return this.sensorManager.register(sensor);
   }
 
-  updateDragPosition(position: Position): void {
-    if (!this.state.dragState.isDragging || !this.state.dragState.draggedNode) return;
+  unregisterSensor(name: string): boolean {
+    return this.sensorManager.unregister(name);
+  }
 
-    // 使用 RAF 节流优化性能
-    if (this.pendingUpdate) return;
+  // 引擎控制
+  enable(): void {
+    this.state.isEnabled = true;
+  }
 
-    this.pendingUpdate = () => {
-      const { draggedNode, initialPosition } = this.state.dragState;
-      
-      // 应用约束
-      let constrainedPosition = { ...position };
-      if (draggedNode!.constraints) {
-        for (const constraint of draggedNode!.constraints) {
-          constrainedPosition = constraint.apply(constrainedPosition, draggedNode!);
-        }
-      }
-
-      // 更新状态
-      this.state.dragState.position = constrainedPosition;
-      this.state.dragState.delta = {
-        x: constrainedPosition.x - initialPosition.x,
-        y: constrainedPosition.y - initialPosition.y,
-      };
-
-      // 碰撞检测
-      const newDropTarget = this.detectCollision(draggedNode!, constrainedPosition);
-      const previousDropTarget = this.state.dragState.activeDropTarget;
-
-      if (newDropTarget !== previousDropTarget) {
-        // 离开之前的目标
-        if (previousDropTarget) {
-          this.emitEvent({
-            type: 'dragleave',
-            node: draggedNode!,
-            position: constrainedPosition,
-            target: previousDropTarget,
-            timestamp: Date.now(),
-          });
-        }
-
-        // 进入新目标
-        if (newDropTarget) {
-          this.emitEvent({
-            type: 'dragenter',
-            node: draggedNode!,
-            position: constrainedPosition,
-            target: newDropTarget,
-            timestamp: Date.now(),
-          });
-        }
-
-        this.state.dragState.activeDropTarget = newDropTarget;
-      }
-
-      // 发送拖拽移动事件
-      this.emitEvent({
-        type: 'dragmove',
-        node: draggedNode!,
-        position: constrainedPosition,
-        target: newDropTarget,
-        delta: this.state.dragState.delta,
-        timestamp: Date.now(),
-      });
-
-      this.pendingUpdate = null;
-    };
-
-    if (!this.rafId) {
-      this.rafId = requestAnimationFrame(() => {
-        if (this.pendingUpdate) {
-          this.pendingUpdate();
-        }
-        this.rafId = null;
+  disable(): void {
+    this.state.isEnabled = false;
+    if (this.state.dragState.isDragging) {
+      this.handleDragCancel({
+        type: 'cancel',
+        position: this.state.dragState.position,
+        target: this.state.dragState.draggedNode?.element!,
+        nativeEvent: new CustomEvent('disable'),
+        timestamp: Date.now()
       });
     }
   }
 
-  endDrag(): void {
-    if (!this.state.dragState.isDragging || !this.state.dragState.draggedNode) return;
-
-    const { draggedNode, position, activeDropTarget } = this.state.dragState;
-
-    // 发送drop事件
-    if (activeDropTarget) {
-      this.emitEvent({
-        type: 'drop',
-        node: draggedNode,
-        position,
-        target: activeDropTarget,
-        timestamp: Date.now(),
-      });
-    }
-
-    // 发送dragend事件
-    this.emitEvent({
-      type: 'dragend',
-      node: draggedNode,
-      position,
-      target: activeDropTarget,
-      timestamp: Date.now(),
-    });
-
-    this.resetDragState();
+  // 状态查询
+  getDragState() {
+    return { ...this.state.dragState };
   }
 
-  cancelDrag(): void {
-    if (!this.state.dragState.isDragging || !this.state.dragState.draggedNode) return;
-
-    const { draggedNode, position } = this.state.dragState;
-
-    this.emitEvent({
-      type: 'dragcancel',
-      node: draggedNode,
-      position,
-      timestamp: Date.now(),
-    });
-
-    this.resetDragState();
-  }
-
-  // 碰撞检测
-  private detectCollision(dragNode: DragNode, position: Position): DropTarget | null {
-    if (!this.options.collisionDetection) return null;
-
-    const enabledDropTargets = Array.from(this.state.dropTargets.values())
-      .filter(target => !target.disabled);
-
-    return this.options.collisionDetection.detectCollision(dragNode, position, enabledDropTargets);
+  isEnabled(): boolean {
+    return this.state.isEnabled;
   }
 
   // 事件系统
@@ -256,77 +389,34 @@ export class DragEngine {
     this.eventEmitter.off(eventType, listener);
   }
 
-  private emitEvent(event: DragEvent): void {
-    this.eventEmitter.emit(event);
-  }
-
-  // 生命周期管理
-  enable(): void {
-    this.state.isEnabled = true;
-    for (const sensor of this.state.sensors.values()) {
-      sensor.enable();
-    }
-  }
-
-  disable(): void {
-    this.state.isEnabled = false;
-    this.cancelDrag();
-    for (const sensor of this.state.sensors.values()) {
-      sensor.disable();
-    }
-  }
-
+  // 清理
   destroy(): void {
-    this.disable();
-    
-    // 清理所有传感器
-    for (const sensor of this.state.sensors.values()) {
-      sensor.teardown();
-    }
-    
-    // 清理RAF
     if (this.rafId) {
       cancelAnimationFrame(this.rafId);
       this.rafId = null;
     }
 
-    // 清理事件监听器
+    this.sensorManager.destroy();
     this.eventEmitter.removeAllListeners();
-    
-    // 清理状态
     this.state.dragNodes.clear();
     this.state.dropTargets.clear();
-    this.state.sensors.clear();
+    this.resetDragState();
   }
 
-  private resetDragState(): void {
-    this.state.dragState = {
-      isDragging: false,
-      draggedNode: null,
-      position: { x: 0, y: 0 },
-      initialPosition: { x: 0, y: 0 },
-      delta: { x: 0, y: 0 },
-      activeDropTarget: null,
+  // Legacy API compatibility
+  startDrag(nodeId: string, position: Position): void {
+    const node = this.state.dragNodes.get(nodeId);
+    if (!node) return;
+
+    // 模拟传感器事件
+    const syntheticEvent: SensorEvent = {
+      type: 'start',
+      position,
+      target: node.element!,
+      nativeEvent: new CustomEvent('synthetic'),
+      timestamp: Date.now()
     };
 
-    // 清理待处理更新
-    this.pendingUpdate = null;
-    if (this.rafId) {
-      cancelAnimationFrame(this.rafId);
-      this.rafId = null;
-    }
-  }
-
-  // 获取状态
-  getState(): DragEngineState {
-    return { ...this.state };
-  }
-
-  getDragState() {
-    return { ...this.state.dragState };
-  }
-
-  isDragging(): boolean {
-    return this.state.dragState.isDragging;
+    this.handleDragStart(syntheticEvent);
   }
 }

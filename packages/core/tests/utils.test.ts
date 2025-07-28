@@ -1,12 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import {
-  calculateDistance,
-  isWithinBounds,
-  clampPosition,
-  getElementCenter,
-  createTransform,
-} from './utils';
-import { Position } from './types';
+  debounce,
+  throttle,
+  clamp,
+  getEventPosition,
+} from '../src/utils';
+import { Position } from '../src/types';
 
 describe('utils', () => {
   describe('calculateDistance', () => {

@@ -1,30 +1,20 @@
-import { Sensor, SensorOptions } from './types';
+// KeyboardSensor placeholder - will be implemented in future versions
+import { Sensor, SensorOptions, SensorEventHandler } from './types';
 
 export class KeyboardSensor implements Sensor {
-  name = 'keyboard';
-  private options: SensorOptions;
-  private activeElement: HTMLElement | null = null;
+  readonly name = 'KeyboardSensor';
+  readonly priority = 50; // Lower than MouseSensor
+  readonly options: SensorOptions = {};
 
-  constructor(options: SensorOptions = {}) {
-    this.options = options;
+  attach(element: HTMLElement, handler: SensorEventHandler): void {
+    console.warn('KeyboardSensor is not implemented yet. Will be available in future versions.');
   }
 
-  activate(): void {
-    document.addEventListener('keydown', this.handleKeyDown);
-  }
-
-  deactivate(): void {
-    document.removeEventListener('keydown', this.handleKeyDown);
-  }
-
-  private handleKeyDown = (e: KeyboardEvent): void => {
-    if (e.key === ' ' || e.key === 'Enter') {
-      const target = e.target as HTMLElement;
-      if (target.hasAttribute('data-draggable-id')) {
-        e.preventDefault();
-        this.activeElement = target;
-        this.options.onActivation?.(e);
-      }
-    }
-  };
+  detach(): void {}
+  enable(): void {}
+  disable(): void {}
+  isEnabled(): boolean { return false; }
+  isActive(): boolean { return false; }
+  canHandle(event: Event): boolean { return false; }
+  destroy(): void {}
 }

@@ -1,47 +1,35 @@
-import { Sensor } from './types';
+// Re-export from @dragforge/sensors for backward compatibility
+export { 
+  BaseSensor,
+  MouseSensor,
+  SensorManager,
+  createMouseSensor,
+  createSensorManager,
+  type MouseSensorOptions,
+  type SensorManagerOptions,
+  type SensorOptions,
+  type SensorEvent,
+  type SensorEventHandler,
+  type Sensor
+} from '@dragforge/sensors';
 
-export class MouseSensor implements Sensor {
-  readonly name = 'MouseSensor';
-  
-  private element: HTMLElement | null = null;
-  private isEnabled = true;
-
-  setup(element: HTMLElement): void {
-    this.element = element;
-  }
-
-  teardown(): void {
-    this.element = null;
-  }
-
-  enable(): void {
-    this.isEnabled = true;
-  }
-
-  disable(): void {
-    this.isEnabled = false;
-  }
-}
+// Legacy TouchSensor placeholder (will be implemented in future versions)
+import { Sensor, SensorOptions, SensorEventHandler } from '@dragforge/sensors';
 
 export class TouchSensor implements Sensor {
   readonly name = 'TouchSensor';
-  
-  private element: HTMLElement | null = null;
-  private isEnabled = true;
+  readonly priority = 90; // Lower than MouseSensor
+  readonly options: SensorOptions = {};
 
-  setup(element: HTMLElement): void {
-    this.element = element;
+  attach(element: HTMLElement, handler: SensorEventHandler): void {
+    console.warn('TouchSensor is not implemented yet. Will be available in future versions.');
   }
 
-  teardown(): void {
-    this.element = null;
-  }
-
-  enable(): void {
-    this.isEnabled = true;
-  }
-
-  disable(): void {
-    this.isEnabled = false;
-  }
+  detach(): void {}
+  enable(): void {}
+  disable(): void {}
+  isEnabled(): boolean { return false; }
+  isActive(): boolean { return false; }
+  canHandle(event: Event): boolean { return false; }
+  destroy(): void {}
 }

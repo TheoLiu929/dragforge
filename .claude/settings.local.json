@@ -10,7 +10,14 @@
       "Bash(sed:*)",
       "Bash(done)",
       "Bash(pnpm dev:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(mv:*)",
+      "Bash(tsc:*)",
+      "Bash(npx tsc:*)",
+      "Bash(cp:*)",
+      "Bash(touch:*)",
+      "Bash(node:*)",
+      "Bash(rm:*)"
     ],
     "deny": []
   }

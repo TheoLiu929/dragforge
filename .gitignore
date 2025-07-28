@@ -16,3 +16,5 @@ coverage/
 *~
 .pnpm-store/
 pnpm-lock.yaml
+tsconfig.tsbuildinfo
+*.tsbuildinfo

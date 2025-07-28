@@ -1,85 +1,20 @@
-import { Position } from '@dragforge/core';
-import { Sensor, SensorOptions, SensorEvent } from './types';
+// PointerSensor placeholder - will be implemented in future versions
+import { Sensor, SensorOptions, SensorEventHandler } from './types';
 
 export class PointerSensor implements Sensor {
-  name = 'pointer';
-  private options: SensorOptions;
-  private listeners: ((event: SensorEvent) => void)[] = [];
-  private pointerId: number | null = null;
+  readonly name = 'PointerSensor';
+  readonly priority = 80; // Between Mouse and Touch
+  readonly options: SensorOptions = {};
 
-  constructor(options: SensorOptions = {}) {
-    this.options = options;
+  attach(element: HTMLElement, handler: SensorEventHandler): void {
+    console.warn('PointerSensor is not implemented yet. Will be available in future versions.');
   }
 
-  activate(): void {
-    document.addEventListener('pointerdown', this.handlePointerDown);
-    document.addEventListener('pointermove', this.handlePointerMove);
-    document.addEventListener('pointerup', this.handlePointerUp);
-    document.addEventListener('pointercancel', this.handlePointerCancel);
-  }
-
-  deactivate(): void {
-    document.removeEventListener('pointerdown', this.handlePointerDown);
-    document.removeEventListener('pointermove', this.handlePointerMove);
-    document.removeEventListener('pointerup', this.handlePointerUp);
-    document.removeEventListener('pointercancel', this.handlePointerCancel);
-  }
-
-  onSensorEvent(listener: (event: SensorEvent) => void): void {
-    this.listeners.push(listener);
-  }
-
-  private handlePointerDown = (e: PointerEvent): void => {
-    if (this.pointerId !== null) return;
-    
-    this.pointerId = e.pointerId;
-    const position: Position = { x: e.clientX, y: e.clientY };
-    
-    this.emit({
-      type: 'start',
-      position,
-      nativeEvent: e,
-    });
-  };
-
-  private handlePointerMove = (e: PointerEvent): void => {
-    if (e.pointerId !== this.pointerId) return;
-    
-    const position: Position = { x: e.clientX, y: e.clientY };
-    
-    this.emit({
-      type: 'move',
-      position,
-      nativeEvent: e,
-    });
-  };
-
-  private handlePointerUp = (e: PointerEvent): void => {
-    if (e.pointerId !== this.pointerId) return;
-    
-    const position: Position = { x: e.clientX, y: e.clientY };
-    this.pointerId = null;
-    
-    this.emit({
-      type: 'end',
-      position,
-      nativeEvent: e,
-    });
-  };
-
-  private handlePointerCancel = (e: PointerEvent): void => {
-    if (e.pointerId !== this.pointerId) return;
-    
-    this.pointerId = null;
-    
-    this.emit({
-      type: 'cancel',
-      position: { x: 0, y: 0 },
-      nativeEvent: e,
-    });
-  };
-
-  private emit(event: SensorEvent): void {
-    this.listeners.forEach(listener => listener(event));
-  }
+  detach(): void {}
+  enable(): void {}
+  disable(): void {}
+  isEnabled(): boolean { return false; }
+  isActive(): boolean { return false; }
+  canHandle(event: Event): boolean { return false; }
+  destroy(): void {}
 }
