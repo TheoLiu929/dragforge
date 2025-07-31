@@ -12,6 +12,7 @@ import {
 import { EventEmitter } from './eventSystem';
 import { RectIntersectionCollision } from './collisionDetection';
 import { SensorManager, createMouseSensor, createSensorManager } from '@dragforge/sensors';
+import { DragOverlay } from './dragOverlay';
 
 // 新的引擎状态接口
 interface DragState {
@@ -35,6 +36,7 @@ export class DragEngine {
   private options: DragEngineOptions;
   private eventEmitter: EventEmitter;
   private sensorManager: SensorManager;
+  private dragOverlay: DragOverlay;
   private rafId: number | null = null;
   private pendingUpdate: (() => void) | null = null;
 
@@ -48,6 +50,11 @@ export class DragEngine {
     this.sensorManager = createSensorManager({
       autoActivate: true,
       exclusiveMode: true
+    });
+    this.dragOverlay = new DragOverlay({
+      className: 'dragforge-overlay',
+      zIndex: 9999,
+      transitionDuration: 200
     });
 
     this.state = {
@@ -125,6 +132,22 @@ export class DragEngine {
       startTime: sensorEvent.timestamp
     };
 
+    // 创建拖拽预览层
+    if (dragNode.element) {
+      // 获取元素的边界框
+      const rect = dragNode.element.getBoundingClientRect();
+      const overlayPosition = {
+        x: rect.left,
+        y: rect.top
+      };
+      
+      this.dragOverlay.create(dragNode.element, overlayPosition);
+      
+      // 添加原始元素的拖拽中样式
+      dragNode.element.classList.add('dragforge-dragging-source');
+      dragNode.element.style.opacity = '0.5';
+    }
+
     // 发送拖拽开始事件
     const dragEvent: DragEvent = {
       type: 'dragstart',
@@ -150,6 +173,19 @@ export class DragEngine {
     this.state.dragState.position = sensorEvent.position;
     this.state.dragState.delta = delta;
 
+    // 更新预览层位置
+    if (this.state.dragState.draggedNode.element) {
+      const rect = this.state.dragState.draggedNode.element.getBoundingClientRect();
+      const overlayPosition = {
+        x: rect.left + delta.x,
+        y: rect.top + delta.y
+      };
+      
+      this.scheduleUpdate(() => {
+        this.dragOverlay.updatePosition(overlayPosition);
+      });
+    }
+
     // 碰撞检测
     const dropTarget = this.detectCollision(sensorEvent.position);
     const previousTarget = this.state.dragState.activeDropTarget;
@@ -158,6 +194,9 @@ export class DragEngine {
     if (dropTarget !== previousTarget) {
       // 离开之前的目标
       if (previousTarget) {
+        // 移除视觉反馈
+        previousTarget.element?.classList.remove('dragforge-drop-active');
+        
         const leaveEvent: DragEvent = {
           type: 'dragleave',
           node: this.state.dragState.draggedNode,
@@ -171,6 +210,9 @@ export class DragEngine {
 
       // 进入新目标
       if (dropTarget) {
+        // 添加视觉反馈
+        dropTarget.element?.classList.add('dragforge-drop-active');
+        
         const enterEvent: DragEvent = {
           type: 'dragenter',
           node: this.state.dragState.draggedNode,
@@ -200,10 +242,31 @@ export class DragEngine {
     });
   }
 
-  private handleDragEnd(sensorEvent: SensorEvent): void {
+  private async handleDragEnd(sensorEvent: SensorEvent): Promise<void> {
     if (!this.state.dragState.isDragging || !this.state.dragState.draggedNode) return;
 
     const { draggedNode, activeDropTarget, delta } = this.state.dragState;
+
+    // 执行放置动画
+    if (activeDropTarget && activeDropTarget.element) {
+      const targetRect = activeDropTarget.element.getBoundingClientRect();
+      const targetCenter = {
+        x: targetRect.left + targetRect.width / 2,
+        y: targetRect.top + targetRect.height / 2
+      };
+
+      // 动画到目标位置
+      await this.dragOverlay.animateTo(targetCenter);
+    } else if (draggedNode.element) {
+      // 如果没有有效的放置目标，动画回到原始位置
+      const originalRect = draggedNode.element.getBoundingClientRect();
+      const originalPosition = {
+        x: originalRect.left,
+        y: originalRect.top
+      };
+      
+      await this.dragOverlay.animateTo(originalPosition);
+    }
 
     // 如果有活跃的放置目标，触发drop事件
     if (activeDropTarget) {
@@ -230,14 +293,28 @@ export class DragEngine {
 
     this.eventEmitter.emit('dragend', endEvent);
 
+    // 清理拖拽状态
+    this.cleanupDrag();
+    
     // 重置状态
     this.resetDragState();
   }
 
-  private handleDragCancel(sensorEvent: SensorEvent): void {
+  private async handleDragCancel(sensorEvent: SensorEvent): Promise<void> {
     if (!this.state.dragState.isDragging || !this.state.dragState.draggedNode) return;
 
     const { draggedNode, delta } = this.state.dragState;
+
+    // 动画回到原始位置
+    if (draggedNode.element) {
+      const originalRect = draggedNode.element.getBoundingClientRect();
+      const originalPosition = {
+        x: originalRect.left,
+        y: originalRect.top
+      };
+      
+      await this.dragOverlay.animateTo(originalPosition);
+    }
 
     // 发送取消事件
     const cancelEvent: DragEvent = {
@@ -250,8 +327,27 @@ export class DragEngine {
 
     this.eventEmitter.emit('dragcancel', cancelEvent);
 
+    // 清理拖拽状态
+    this.cleanupDrag();
+    
     // 重置状态
     this.resetDragState();
+  }
+
+  private cleanupDrag(): void {
+    // 清理预览层
+    this.dragOverlay.destroy();
+
+    // 恢复原始元素样式
+    if (this.state.dragState.draggedNode?.element) {
+      this.state.dragState.draggedNode.element.classList.remove('dragforge-dragging-source');
+      this.state.dragState.draggedNode.element.style.opacity = '';
+    }
+
+    // 恢复放置目标样式
+    if (this.state.dragState.activeDropTarget?.element) {
+      this.state.dragState.activeDropTarget.element.classList.remove('dragforge-drop-active');
+    }
   }
 
   // 工具方法
@@ -396,6 +492,12 @@ export class DragEngine {
       this.rafId = null;
     }
 
+    // 如果正在拖拽，先取消
+    if (this.state.dragState.isDragging) {
+      this.cleanupDrag();
+    }
+
+    this.dragOverlay.destroy();
     this.sensorManager.destroy();
     this.eventEmitter.removeAllListeners();
     this.state.dragNodes.clear();
@@ -419,4 +521,8 @@ export class DragEngine {
 
     this.handleDragStart(syntheticEvent);
   }
+}
+
+export function createDragEngine(options?: DragEngineOptions): DragEngine {
+  return new DragEngine(options);
 }

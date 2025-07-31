@@ -4,3 +4,4 @@ export * from './utils';
 export * from './eventSystem';
 export * from './collisionDetection';
 export * from './sensors';
+export * from './dragOverlay';

@@ -1,0 +1,104 @@
+/* DragForge Core Styles */
+
+/* Drag Overlay Container */
+.dragforge-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Dragging Source Element */
+.dragforge-dragging-source {
+  opacity: 0.5;
+  cursor: grabbing !important;
+}
+
+/* Active Drop Target */
+.dragforge-drop-active {
+  outline: 2px dashed #4CAF50;
+  outline-offset: 2px;
+  background-color: rgba(76, 175, 80, 0.1);
+  transition: all 0.2s ease;
+}
+
+/* Draggable Elements */
+[data-dragforge-draggable] {
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  touch-action: none;
+}
+
+[data-dragforge-draggable]:active {
+  cursor: grabbing;
+}
+
+[data-dragforge-draggable][data-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Drop Targets */
+[data-dragforge-droppable] {
+  position: relative;
+  transition: background-color 0.2s ease;
+}
+
+[data-dragforge-droppable].dragforge-drop-over {
+  background-color: rgba(33, 150, 243, 0.1);
+}
+
+/* Drag Preview */
+.dragforge-preview {
+  pointer-events: none !important;
+  z-index: 10000;
+  opacity: 0.9;
+  transform-origin: center center;
+}
+
+/* Animations */
+@keyframes dragforge-pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.dragforge-drop-active {
+  animation: dragforge-pulse 1s infinite;
+}
+
+/* Performance Optimizations */
+.dragforge-dragging * {
+  pointer-events: none !important;
+}
+
+.dragforge-overlay .dragging {
+  will-change: transform;
+  transform: translateZ(0); /* Enable GPU acceleration */
+}
+
+/* Accessibility */
+[data-dragforge-draggable]:focus {
+  outline: 2px solid #2196F3;
+  outline-offset: 2px;
+}
+
+/* Responsive Touch Areas */
+@media (pointer: coarse) {
+  [data-dragforge-draggable] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}

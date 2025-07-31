@@ -1,0 +1,260 @@
+/* Import core styles */
+@import '@dragforge/core/dist/styles.css';
+
+.sensor-test-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+}
+
+.sensor-test-container h1 {
+  text-align: center;
+  color: #333;
+  margin-bottom: 40px;
+}
+
+.test-area {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  margin-bottom: 40px;
+}
+
+.drag-items h2,
+.drop-zones h2 {
+  margin-bottom: 20px;
+  color: #555;
+}
+
+.drag-item {
+  padding: 20px;
+  margin-bottom: 15px;
+  border-radius: 8px;
+  cursor: grab;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.drag-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.drag-item span {
+  font-weight: bold;
+  font-size: 16px;
+  margin-bottom: 5px;
+}
+
+.drag-item small {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.drag-item.blue {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.drag-item.green {
+  background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+  color: #333;
+}
+
+.drag-item.red {
+  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+  color: #333;
+}
+
+.drag-item.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.drop-zone {
+  min-height: 150px;
+  margin-bottom: 15px;
+  border: 2px dashed #ccc;
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  background: #f8f9fa;
+}
+
+.drop-zone h3 {
+  margin: 0 0 10px 0;
+  color: #666;
+}
+
+.drop-zone p {
+  margin: 0;
+  font-size: 14px;
+  color: #888;
+}
+
+.drop-zone.dragforge-drop-active {
+  border-color: #4CAF50;
+  background-color: rgba(76, 175, 80, 0.05);
+  transform: scale(1.02);
+}
+
+.stats {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.stats h2 {
+  margin: 0 0 15px 0;
+  color: #555;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  background: white;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #666;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: bold;
+  color: #333;
+}
+
+.event-log {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.log-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.log-header h2 {
+  margin: 0;
+  color: #555;
+}
+
+.log-header button {
+  padding: 6px 12px;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s ease;
+}
+
+.log-header button:hover {
+  background: #c82333;
+}
+
+.log-entries {
+  max-height: 200px;
+  overflow-y: auto;
+  background: white;
+  padding: 10px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+}
+
+.log-entry {
+  display: flex;
+  gap: 10px;
+  padding: 4px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.log-entry:last-child {
+  border-bottom: none;
+}
+
+.log-type {
+  font-weight: bold;
+  min-width: 100px;
+}
+
+.log-entry.dragstart .log-type { color: #28a745; }
+.log-entry.dragmove .log-type { color: #007bff; }
+.log-entry.dragenter .log-type { color: #17a2b8; }
+.log-entry.dragleave .log-type { color: #ffc107; }
+.log-entry.drop .log-type { color: #6f42c1; }
+.log-entry.dragend .log-type { color: #dc3545; }
+.log-entry.dragcancel .log-type { color: #fd7e14; }
+
+.log-message {
+  color: #666;
+}
+
+.instructions {
+  background: #e3f2fd;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #bbdefb;
+}
+
+.instructions h2 {
+  margin: 0 0 15px 0;
+  color: #1976d2;
+}
+
+.instructions ul {
+  margin: 0;
+  padding-left: 25px;
+  color: #555;
+}
+
+.instructions li {
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+/* Drag preview styles */
+.dragforge-overlay .dragging {
+  opacity: 0.8;
+  transform-origin: center center;
+  filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.3));
+}
+
+/* Animations */
+@keyframes dragforge-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+.drag-item:active {
+  animation: dragforge-shake 0.3s ease-in-out;
+}

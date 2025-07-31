@@ -1,280 +1,194 @@
-import React, { useState } from 'react';
-import { 
-  DragForgeProvider, 
-  DragForgeable, 
-  DragForgeDroppable,
-  useDragForgeEngine
-} from '@dragforge/react';
-import { createMouseSensor } from '@dragforge/core';
+import React, { useEffect, useRef, useState } from 'react';
+import { createDragEngine, DragEngine, DragEvent } from '@dragforge/core';
+import './SensorTest.css';
 
-interface SensorEvent {
-  type: string;
+interface LogEntry {
   timestamp: number;
-  position: { x: number; y: number };
-  sensor?: string;
+  type: string;
+  message: string;
 }
 
-function SensorDebugger() {
-  const engine = useDragForgeEngine();
-  const [events, setEvents] = useState<SensorEvent[]>([]);
+const SensorTest: React.FC = () => {
+  const engineRef = useRef<DragEngine | null>(null);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [dragCount, setDragCount] = useState(0);
+  const [dropCount, setDropCount] = useState(0);
 
-  React.useEffect(() => {
+  const addLog = (type: string, message: string) => {
+    setLogs(prev => [...prev, {
+      timestamp: Date.now(),
+      type,
+      message
+    }].slice(-10)); // Keep last 10 logs
+  };
+
+  useEffect(() => {
+    // Create drag engine
+    const engine = createDragEngine({
+      autoScroll: true
+    });
+    engineRef.current = engine;
+
+    // Setup event listeners
     const unsubscribers = [
-      engine.on('dragstart', (event) => {
-        setEvents(prev => [...prev.slice(-9), {
-          type: 'dragstart',
-          timestamp: event.timestamp,
-          position: event.position,
-          sensor: 'MouseSensor'
-        }]);
+      engine.on('dragstart', (event: DragEvent) => {
+        addLog('dragstart', `Started dragging ${event.node.id}`);
+        setDragCount(prev => prev + 1);
       }),
-      engine.on('dragmove', (event) => {
-        setEvents(prev => [...prev.slice(-9), {
-          type: 'dragmove',
-          timestamp: event.timestamp,
-          position: event.position,
-          sensor: 'MouseSensor'
-        }]);
+      engine.on('dragmove', (event: DragEvent) => {
+        addLog('dragmove', `Position: ${Math.round(event.position.x)}, ${Math.round(event.position.y)}`);
       }),
-      engine.on('dragend', (event) => {
-        setEvents(prev => [...prev.slice(-9), {
-          type: 'dragend',
-          timestamp: event.timestamp,
-          position: event.position,
-          sensor: 'MouseSensor'
-        }]);
+      engine.on('dragenter', (event: DragEvent) => {
+        addLog('dragenter', `Entered ${event.target?.id}`);
       }),
-      engine.on('dragcancel', (event) => {
-        setEvents(prev => [...prev.slice(-9), {
-          type: 'dragcancel',
-          timestamp: event.timestamp,
-          position: event.position,
-          sensor: 'MouseSensor'
-        }]);
-      })
+      engine.on('dragleave', (event: DragEvent) => {
+        addLog('dragleave', `Left ${event.target?.id}`);
+      }),
+      engine.on('drop', (event: DragEvent) => {
+        addLog('drop', `Dropped ${event.node.id} on ${event.target?.id}`);
+        setDropCount(prev => prev + 1);
+      }),
+      engine.on('dragend', (event: DragEvent) => {
+        addLog('dragend', `Ended dragging ${event.node.id}`);
+      }),
+      engine.on('dragcancel', (event: DragEvent) => {
+        addLog('dragcancel', `Cancelled dragging ${event.node.id}`);
+      }),
     ];
+
+    // Register draggable items
+    const item1 = document.getElementById('drag-item-1');
+    const item2 = document.getElementById('drag-item-2');
+    const item3 = document.getElementById('drag-item-3');
+
+    if (item1) {
+      engine.registerDragNode({
+        id: 'item-1',
+        element: item1 as HTMLElement,
+        data: { color: 'blue', value: 1 }
+      });
+    }
+
+    if (item2) {
+      engine.registerDragNode({
+        id: 'item-2',
+        element: item2 as HTMLElement,
+        data: { color: 'green', value: 2 }
+      });
+    }
+
+    if (item3) {
+      engine.registerDragNode({
+        id: 'item-3',
+        element: item3 as HTMLElement,
+        data: { color: 'red', value: 3 },
+        disabled: true // This one is disabled
+      });
+    }
+
+    // Register drop targets
+    const zone1 = document.getElementById('drop-zone-1');
+    const zone2 = document.getElementById('drop-zone-2');
+
+    if (zone1) {
+      engine.registerDropTarget({
+        id: 'zone-1',
+        element: zone1 as HTMLElement,
+        data: { accepts: ['blue', 'green'] }
+      });
+    }
+
+    if (zone2) {
+      engine.registerDropTarget({
+        id: 'zone-2',
+        element: zone2 as HTMLElement,
+        data: { accepts: ['red', 'green'] }
+      });
+    }
 
     return () => {
       unsubscribers.forEach(unsub => unsub());
+      engine.destroy();
     };
-  }, [engine]);
+  }, []);
+
+  const clearLogs = () => setLogs([]);
 
   return (
-    <div style={{ 
-      padding: '10px', 
-      background: '#f5f5f5', 
-      borderRadius: '4px', 
-      marginBottom: '20px',
-      fontFamily: 'monospace',
-      fontSize: '12px'
-    }}>
-      <h3 style={{ margin: '0 0 10px 0' }}>传感器事件日志 (最近10条)</h3>
-      <div style={{ height: '150px', overflow: 'auto' }}>
-        {events.length === 0 ? (
-          <div style={{ color: '#666' }}>等待拖拽事件...</div>
-        ) : (
-          events.map((event, index) => (
-            <div key={index} style={{ 
-              margin: '2px 0',
-              color: event.type === 'dragstart' ? '#28a745' : 
-                    event.type === 'dragend' ? '#dc3545' :
-                    event.type === 'dragcancel' ? '#ffc107' : '#007bff'
-            }}>
-              [{new Date(event.timestamp).toLocaleTimeString()}] 
-              {event.type} - ({event.position.x}, {event.position.y}) - {event.sensor}
-            </div>
-          ))
-        )}
+    <div className="sensor-test-container">
+      <h1>DragForge Sensor System Test</h1>
+      
+      <div className="test-area">
+        <div className="drag-items">
+          <h2>Draggable Items</h2>
+          <div id="drag-item-1" className="drag-item blue" data-dragforge-draggable>
+            <span>Item 1</span>
+            <small>Blue • Value: 1</small>
+          </div>
+          <div id="drag-item-2" className="drag-item green" data-dragforge-draggable>
+            <span>Item 2</span>
+            <small>Green • Value: 2</small>
+          </div>
+          <div id="drag-item-3" className="drag-item red disabled" data-dragforge-draggable data-disabled="true">
+            <span>Item 3 (Disabled)</span>
+            <small>Red • Value: 3</small>
+          </div>
+        </div>
+
+        <div className="drop-zones">
+          <h2>Drop Zones</h2>
+          <div id="drop-zone-1" className="drop-zone" data-dragforge-droppable>
+            <h3>Zone 1</h3>
+            <p>Accepts: Blue, Green</p>
+          </div>
+          <div id="drop-zone-2" className="drop-zone" data-dragforge-droppable>
+            <h3>Zone 2</h3>
+            <p>Accepts: Red, Green</p>
+          </div>
+        </div>
       </div>
-      <button 
-        onClick={() => setEvents([])}
-        style={{ 
-          marginTop: '10px', 
-          padding: '4px 8px', 
-          background: '#007bff', 
-          color: 'white', 
-          border: 'none', 
-          borderRadius: '3px',
-          cursor: 'pointer'
-        }}
-      >
-        清空日志
-      </button>
+
+      <div className="stats">
+        <h2>Statistics</h2>
+        <div className="stat-grid">
+          <div className="stat">
+            <span className="stat-label">Total Drags:</span>
+            <span className="stat-value">{dragCount}</span>
+          </div>
+          <div className="stat">
+            <span className="stat-label">Successful Drops:</span>
+            <span className="stat-value">{dropCount}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="event-log">
+        <div className="log-header">
+          <h2>Event Log</h2>
+          <button onClick={clearLogs}>Clear</button>
+        </div>
+        <div className="log-entries">
+          {logs.map((log, index) => (
+            <div key={index} className={`log-entry ${log.type}`}>
+              <span className="log-type">{log.type}</span>
+              <span className="log-message">{log.message}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="instructions">
+        <h2>Instructions</h2>
+        <ul>
+          <li>Drag items from the left to drop zones on the right</li>
+          <li>Watch the event log to see the drag lifecycle</li>
+          <li>Notice the visual feedback when hovering over drop zones</li>
+          <li>Item 3 is disabled and cannot be dragged</li>
+          <li>The drag preview follows your cursor with smooth animations</li>
+        </ul>
+      </div>
     </div>
   );
-}
+};
 
-export function SensorTest() {
-  const customMouseSensor = createMouseSensor({
-    activationConstraint: {
-      distance: 8, // 8px移动距离才激活
-      tolerance: 3, // 3px容差
-      delay: 100    // 100ms延迟
-    }
-  });
-
-  return (
-    <DragForgeProvider>
-      <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
-        <h1>传感器系统测试</h1>
-        
-        <SensorDebugger />
-        
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px' }}>
-          <div>
-            <h2>拖拽元素</h2>
-            <p style={{ fontSize: '14px', color: '#666', marginBottom: '20px' }}>
-              MouseSensor配置：距离阈值8px，容差3px，延迟100ms
-            </p>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <DragForgeable
-                id="sensor-test-1"
-                data={{ type: 'test', name: 'Test Item 1' }}
-                style={{
-                  padding: '15px',
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  color: 'white',
-                  borderRadius: '8px',
-                  cursor: 'grab',
-                  userSelect: 'none',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                  transition: 'transform 0.2s ease'
-                }}
-              >
-                🖱️ MouseSensor Test Item 1
-                <div style={{ fontSize: '12px', opacity: 0.8, marginTop: '5px' }}>
-                  拖拽我测试MouseSensor
-                </div>
-              </DragForgeable>
-              
-              <DragForgeable
-                id="sensor-test-2"
-                data={{ type: 'test', name: 'Test Item 2' }}
-                style={{
-                  padding: '15px',
-                  background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-                  color: 'white',
-                  borderRadius: '8px',
-                  cursor: 'grab',
-                  userSelect: 'none',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                  transition: 'transform 0.2s ease'
-                }}
-              >
-                🎯 MouseSensor Test Item 2
-                <div style={{ fontSize: '12px', opacity: 0.8, marginTop: '5px' }}>
-                  测试拖拽阈值和边界情况
-                </div>
-              </DragForgeable>
-              
-              <div style={{
-                padding: '15px',
-                background: '#e9ecef',
-                borderRadius: '8px',
-                border: '2px dashed #adb5bd'
-              }}>
-                <div style={{ fontSize: '14px', color: '#495057' }}>
-                  ℹ️ 传感器特性测试：
-                </div>
-                <ul style={{ fontSize: '12px', color: '#6c757d', margin: '8px 0 0 20px' }}>
-                  <li>需要移动8px以上才开始拖拽</li>
-                  <li>3px容差内不会误触发</li>
-                  <li>100ms延迟防止快速点击</li>
-                  <li>支持鼠标离开窗口的边界处理</li>
-                  <li>自动阻止浏览器默认拖拽行为</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-          
-          <div>
-            <h2>放置区域</h2>
-            <p style={{ fontSize: '14px', color: '#666', marginBottom: '20px' }}>
-              将左侧元素拖拽到这些区域，观察传感器事件日志
-            </p>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <DragForgeDroppable
-                id="sensor-drop-1"
-                style={{
-                  minHeight: '80px',
-                  padding: '20px',
-                  border: '2px dashed #28a745',
-                  borderRadius: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: '#f8f9fa',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                📦 Drop Zone 1
-                <div style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
-                  主要放置区域
-                </div>
-              </DragForgeDroppable>
-              
-              <DragForgeDroppable
-                id="sensor-drop-2"
-                style={{
-                  minHeight: '80px',
-                  padding: '20px',
-                  border: '2px dashed #dc3545',
-                  borderRadius: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: '#f8f9fa',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                🎯 Drop Zone 2
-                <div style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
-                  次要放置区域
-                </div>
-              </DragForgeDroppable>
-              
-              <div style={{
-                minHeight: '60px',
-                padding: '15px',
-                background: '#fff3cd',
-                border: '1px solid #ffeaa7',
-                borderRadius: '8px',
-                fontSize: '12px',
-                color: '#856404'
-              }}>
-                ⚠️ <strong>边界情况测试</strong><br/>
-                拖拽过程中尝试：<br/>
-                • 鼠标快速移出窗口<br/>
-                • 按ESC键或失去窗口焦点<br/>
-                • 右键点击
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div style={{ 
-          marginTop: '40px', 
-          padding: '20px', 
-          background: '#e3f2fd',
-          borderRadius: '8px',
-          border: '1px solid #bbdefb'
-        }}>
-          <h3 style={{ margin: '0 0 10px 0', color: '#1976d2' }}>🔧 MouseSensor技术细节</h3>
-          <div style={{ fontSize: '14px', color: '#424242' }}>
-            <strong>实现特性：</strong>
-            <ul style={{ margin: '8px 0 0 20px' }}>
-              <li><strong>拖拽阈值：</strong>防止意外触发，支持距离和时间约束</li>
-              <li><strong>边界处理：</strong>处理鼠标离开窗口、窗口失焦等边界情况</li>
-              <li><strong>事件管理：</strong>自动绑定/解绑全局事件监听器</li>
-              <li><strong>冲突避免：</strong>阻止浏览器默认拖拽、文本选择、右键菜单</li>
-              <li><strong>性能优化：</strong>使用RAF节流、事件池管理</li>
-              <li><strong>优先级系统：</strong>支持多传感器优先级管理</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </DragForgeProvider>
-  );
-}
+export default SensorTest;
